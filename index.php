@@ -1,105 +1,15 @@
 <?php
 
-class Reponse
-{
+include("./question.php");
+include("./reponse.php");
 
-    const BONNE_REPONSE = true;
-    const MAUVAISE_REPONSE = false;
-    public string $reponse;
-    public string $status;
-
-
-    public function __construct(string $reponse, string $status = Reponse::MAUVAISE_REPONSE)
-    {
-        $this->reponse = $reponse;
-        $this->status = $status;
-    }
-
-    public function getReponse(): string
-    {
-        return $this->reponse;
-    }
-
-    public function getStatus(): string
-    {
-        return $this->status;
-    }
-}
-
-class question
-{
-    private string $question;
-    private array $reponses = [];
-    private string $explication;
-
-
-
-
-    public function __construct(string $question)
-    {
-        $this->question = $question;
-    }
-    public function ajouterReponse(string $reponse): void
-    {
-        $this->reponses = $reponse;
-    }
-    public function getReponses()
-    {
-        return $this->reponses;
-    }
-
-    public function getExplication(): string
-    {
-        return $this->explication;
-    }
-    public function setExplication(string $explication): void
-    {
-        $this->explication = $explication;
-    }
-    public function getQuestion(): string
-    {
-        return $this->question;
-    }
-
-    public function getReponse(int $num)
-    {
-        foreach ($this->reponses as $i => $reponse) {
-            if ($i == $num) {
-                return $reponse;
-            }
-        }
-
-        // return $this->reponses[$num];
-    }
-
-    public function getNumBonneReponse(): int{
-        // parcourir le tableau des réponses
-        foreach ($this->reponses as $i => $reponse) {
-            // si la réponse est une bonne réponse alors
-            if($reponse -> getStatus() == true){
-                // je retourne l'index
-                return $i;
-            }
-        }
-    }
-
-    public function getBonneReponse(): object{
-        foreach ($this->reponses as $i => $reponse){
-            // si le numéro de la bonne réponse est egale à l'index donc
-            if($reponse->getNumBonneReponse() == $i){
-                // réponse est la bonne réponse
-                return $reponse;
-            }
-        }
-    }
-}
 
 class QCM
 {
-    private array $questions;
-    private array $appreciations;
+    private array $questions = [];
+    private array $appreciations = [];
 
-    function ajouterQuestion(object $question)
+    function ajouterQuestion(Question $question)
     {
         array_push($this->questions, $question);
     }
@@ -109,32 +19,79 @@ class QCM
         return $this->questions;
     }
 
-    function ajouterAppreciations(object $appreciations)
+    public function setAppreciation(array $appreciation): Qcm
     {
-        array_push($this->appreciations, $appreciations);
+        foreach ($appreciation as $key => $appr) {
+            if (is_numeric($key))
+                $this->appreciations[(int)$appr] = $appr;
+            else {
+                list($min, $max) = explode('-', $key);
+                if ($min > $max)
+                    list($min, $max) = array($max, $min);
+                for ($i = (int)$min; $i <= $max; $i++)
+                    $this->appreciations[$i] = $appr;
+            }
+        }
+        return $this;
     }
 
-    function getAppreciations(object $appreciations)
+    function getAppreciation()
     {
         return $this->appreciations;
     }
 
     public function generer()
     {
-        if(isset ($_POST) && !empty($_POST)){
-
-
-        } else {
-            echo "<form>";
-            foreach (this->questions as $i => $question) {
-                echo $questions->getQuestions();
-
-                foreach ($this->reponses->getReponses as $j => $reponse) {
-                    echo $reponses->getReponses();
+        $bonneR = 0;
+        if (isset ($_POST) && !empty($_POST)) {
+            foreach ($this->questions as $i => $question) {
+                echo '<p>La question ' . $i . ' : ' . $question->getTextQuestion() . '</p>';
+                if ($_POST[$i] == $question->getNumBonneReponse()) {
+                    echo '<p>Bonne reponse</p>';
+                    $bonneR++;
+                } else {
+                    echo '<p>Mauvaise reponse</p>';
+                    echo '<p>La bonne reponse : ' . $question->getBonneReponse()->getReponse() . '</p>';
                 }
+                echo '<p>' . $question->getExplication() . '</p>';
+                echo '<hr>';
             }
+            $score = $bonneR / count($this->questions) * 20;
+            echo $score . ' / 20';
+            echo '<p>'.$this->appreciations[$score].'</p>';
+        } else {
+            echo "<form method='post'>";
+            foreach ($this->questions as $i => $questions) {
+                echo $questions->getTextQuestion();
+                foreach ($questions->getReponses() as $j => $reponse) {
+                    echo "<input id='" . $j . "' type='radio' name= '" . $i . "' value= '" . $j . "'><label for='" . $j . "'>" . $reponse->getReponse() . "</label>";
+                    echo "</br>";
+                }
+
+
+            }
+            echo '<input type="submit" value="Envoyer"></form>';
         }
     }
 }
 
 
+$qcm = new Qcm();
+
+$question1 = new Question('Et paf, ça fait ...');
+$question1->ajouterReponse(new Reponse('Des mielpops'));
+$question1->ajouterReponse(new Reponse('Des chocapics', Reponse::BONNE_REPONSE));
+$question1->ajouterReponse(new Reponse('Des actimels'));
+$question1->setExplications('Et oui, la célèbre citation est « Et paf, ça fait des chocapics ! »');
+$qcm->ajouterQuestion($question1);
+
+$question2 = new Question('POO signifie');
+$question2->ajouterReponse(new Reponse('Php Orienté Objet'));
+$question2->ajouterReponse(new Reponse('ProgrammatiOn Orientée'));
+$question2->ajouterReponse(new Reponse('Programmation Orientée Objet', Reponse::BONNE_REPONSE));
+$question2->setExplications('Sans commentaires si vous avez eu faux :-°');
+$qcm->ajouterQuestion($question2);
+
+$qcm->setAppreciation(array('0-10' => 'Pas top du tout ...',
+    '10-20' => 'Très bien ...'));
+$qcm->generer();
